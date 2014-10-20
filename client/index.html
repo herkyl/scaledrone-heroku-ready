@@ -1,0 +1,70 @@
+<html>
+  <head>
+    <title>Yo ScaleDrone!</title>
+  </head>
+  <body>
+    <p>Check console for logs.</p>
+    <p>Wait for client to get connected (and authenthicated if enabled).</p>
+    <p>Try sending a message from the console using: <pre>drone.publish({message: 'hello world!', room: 'yo-room'});</pre></p>
+    <script type="text/javascript" src="https://api2.scaledrone.com/assets/scaledrone.min.js"></script>
+    <script type="text/javascript">
+      var drone = new ScaleDrone('{{channel}}');
+      console.log('Connection to ScaleDrone..');
+
+      drone.on('close', function (event) {
+        console.log('ScaleDrone closed connection', event);
+      });
+
+      drone.on('error', function (event) {
+        console.log('Error with ScaleDrone connection', event);
+      });
+
+      drone.on('open', function (error) {
+        if (error) return console.error(error);
+        console.log('Connection open');
+        getJWT(drone.clientId, function (token) {
+          drone.authenticate(token);
+        });
+      });
+
+      drone.on('authenticate', function (error) {
+        if (error) return console.error(error);
+        console.log('Authenticated');
+        joinRoom();
+      });
+
+      function getJWT(clientId, callback) {
+        console.log('Asking for JSON Web Token..');
+        request = new XMLHttpRequest();
+        request.open('GET', '/jwt?clientId=' + clientId, true);
+
+        request.onload = function() {
+          if (this.status >= 200 && this.status < 400) {
+            callback(this.response);
+          } else {
+            console.error('Unable to get JWT', this);
+          }
+        };
+
+        request.onerror = function(error) {
+          console.error('Unable to get JWT', error);
+        };
+
+        request.send();
+      }
+
+      function joinRoom() {
+        var room = drone.subscribe('yo-room');
+        console.log('Connection to room yo-room..')
+        room.on('open', function (error) {
+          if (error) return console.error(error);
+          console.log('Connected to room', room.name);
+        });
+        room.on('data', function (data) {
+          console.log('Message from room', room.name);
+          console.log(data);
+        });
+      }
+    </script>
+  </body>
+</html>
